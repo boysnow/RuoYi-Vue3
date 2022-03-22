@@ -272,3 +272,17 @@
 	position: absolute;
 	right: 0;
 }
+
+@-webkit-keyframes red-bg {
+	0% { background-color: #e74c3c; }
+	// 100% { background-color: #f6f6f600; }
+  }
+@keyframes red-bg {
+	0% { background-color: #e74c3c; }
+	// 100% { background-color: #f6f6f600; }
+}
+.animate-red-bg {
+	// background-color: #e74c3c;
+	animation: red-bg 5s 1;
+	-webkit-animation: red-bg 5s 1;
+  }
