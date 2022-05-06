@@ -29,25 +29,29 @@
          :cell-class-name="changeBgColor"
       >
         <!-- <template #scope="scope"> -->
-         <el-table-column label="序号" width="50" type="index" align="center">
+        <el-table-column label="序号" width="50" type="index" align="center">
             <template #default="scope">
                <span>{{ (pageNum - 1) * pageSize + scope.$index + 1 }}</span>
             </template>
-         </el-table-column>
-         <el-table-column label="商品コード" align="center" prop="productCode" :show-overflow-tooltip="true" />
-         <el-table-column label="タイトル" align="center" prop="productTitle" :show-overflow-tooltip="true" />
-         <el-table-column label="現在価格" align="center" prop="nowPrice" :show-overflow-tooltip="true" />
-         <el-table-column label="保留価格" align="center" prop="onholdPrice" :show-overflow-tooltip="true" />
-         <el-table-column label="入札開始日時" align="center" prop="bidStartDate" :show-overflow-tooltip="true" />
-         <el-table-column label="最後入札者" align="center" prop="bidLastUser" :show-overflow-tooltip="true" />
-         <el-table-column label="托管ユーザ１" align="center" prop="trusteeshipUser1" :show-overflow-tooltip="true" />
-         <el-table-column label="托管ユーザ２" align="center" prop="trusteeshipUser2" :show-overflow-tooltip="true" />
-         <el-table-column label="登录时间" align="center" prop="loginTime" width="180" >
+        </el-table-column>
+        <el-table-column label="商品コード" align="center" prop="productCode" :show-overflow-tooltip="true" />
+        <el-table-column label="タイトル" align="center" width="400" prop="productTitle" :show-overflow-tooltip="true" />
+        <el-table-column label="現在価格" align="center" width="100" prop="nowPrice" :show-overflow-tooltip="true" />
+        <el-table-column label="保留価格" align="center" width="100" prop="onholdPrice" :show-overflow-tooltip="true" />
+        <el-table-column label="入札開始日時" align="center" width="160" prop="bidStartDate" :show-overflow-tooltip="true" >
             <template #default="scope">
-               <span>{{ parseTime(scope.row.loginTime) }}</span>
+                <span>{{ parseTime(scope.row.bidStartDate) }}</span>
             </template>
-         </el-table-column>
-         <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
+        </el-table-column>
+        <el-table-column label="入札終了日時" align="center" width="160" prop="bidEndDate" :show-overflow-tooltip="true" >
+            <template #default="scope">
+                <span>{{ parseTime(scope.row.bidEndDate) }}</span>
+            </template>
+        </el-table-column>
+        <el-table-column label="最後入札者" align="center" prop="bidLastUser" :show-overflow-tooltip="true" />
+        <el-table-column label="托管ユーザ１" align="center" prop="trusteeshipUser1" :show-overflow-tooltip="true" />
+        <el-table-column label="托管ユーザ２" align="center" prop="trusteeshipUser2" :show-overflow-tooltip="true" />
+        <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
             <template #default="scope">
                <el-button
                   type="text"
@@ -56,7 +60,7 @@
                   v-hasPermi="['monitor:online:forceLogout']"
                >强退</el-button>
             </template>
-         </el-table-column>
+        </el-table-column>
         <!-- </template> -->
       </el-table>
 
@@ -64,8 +68,8 @@
    </div>
 </template>
 
-<script setup name="BidList">
-import { listBidlist as initData } from "@/api/aucper/bidlist";
+<script setup name="Bid">
+import { listBid as initData } from "@/api/aucper/bid";
 
 const { proxy } = getCurrentInstance();
 
@@ -87,9 +91,6 @@ function getList() {
     // 値が変化あるかチェック
     let beforeData = dataList.value;
     dataList.value = response.rows;
-    console.log("--------------------");
-    console.log(beforeData);
-    console.log(dataList.value);
     // 
     dataList.value.map(newrow => {
         // レコード特定
@@ -142,9 +143,6 @@ function getList() {
             }
         }
     });
-    console.log("=========================");
-    console.log(dataList.value);
-
 
 
     total.value = response.total;
@@ -171,7 +169,7 @@ function handleForceLogout(row) {
   }).catch(() => {});
 }
 
-// getList();
+getList();
 
 
 let timerId = setInterval(() => {
