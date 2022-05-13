@@ -42,3 +42,11 @@ export function delBid(id) {
     method: 'delete'
   })
 }
+
+// 入札関連の設定情報
+export function getBidConfig() {
+  return request({
+    url: '/aucper/bid/config',
+    method: 'get'
+  })
+}

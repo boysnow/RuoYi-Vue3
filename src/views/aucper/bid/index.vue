@@ -1,29 +1,5 @@
 <template>
    <div class="app-container">
-      <el-form :model="queryParams" ref="queryRef" :inline="true" label-width="68px">
-         <el-form-item label="登录地址" prop="productCode">
-            <el-input
-               v-model="queryParams.productCode"
-               placeholder="请输入登录地址"
-               clearable
-               @keyup.enter="handleQuery"
-            />
-         </el-form-item>
-         <el-form-item label="用户名称" prop="taskStatus">
-            <el-input
-               v-model="queryParams.taskStatus"
-               placeholder="请输入用户名称"
-               clearable
-               @keyup.enter="handleQuery"
-            />
-         </el-form-item>
-         <el-form-item>
-            <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
-            <el-button icon="Refresh" @click="resetQuery">重置</el-button>
-         </el-form-item>
-      </el-form>
-
-      
       <el-row :gutter="10" class="mb8">
          <el-col :span="1.5">
             <el-button
@@ -58,29 +34,39 @@
       </el-row>
       <el-table
          v-loading="loading"
-         :data="dataList.slice((queryParams.pageNum - 1) * queryParams.pageSize, queryParams.pageNum * queryParams.pageSize)"
+         :data="dataList"
          style="width: 100%;"
          :cell-class-name="changeBgColor"
          :row-style="rowBgColor"
       >
-        <!-- <template #scope="scope"> -->
         <el-table-column label="#" width="50" type="index" align="center">
             <template #default="scope">
-               <span>{{ (queryParams.pageNum - 1) * queryParams.pageSize + scope.$index + 1 }}</span>
+               <span>{{ scope.$index + 1 }}</span>
             </template>
         </el-table-column>
         <el-table-column label="商品コード" align="center" width="120" prop="productCode" >
             <template #default="scope">
-                <a :href="'https://page.auctions.yahoo.co.jp/jp/auction/' + scope.row.productCode" target="_blank">{{ scope.row.productCode }}</a>
+                <a :href="baseUrl + scope.row.productCode" target="_blank">{{ scope.row.productCode }}</a>
             </template>
         </el-table-column>
         <el-table-column label="タイトル" align="center" width="400" prop="productTitle" :show-overflow-tooltip="true" />
         <el-table-column label="現在価格" align="center" width="100" prop="nowPrice" />
         <el-table-column label="保留価格" align="center" width="100" prop="onholdPrice" />
-        <el-table-column label="入札数" align="center" width="60" prop="bidUserCount" />
-        <el-table-column label="入札終了日時" align="center" width="160" prop="bidEndDate" :show-overflow-tooltip="true" >
+        <el-table-column label="入札数" align="center" width="65" prop="bidUserCount" />
+        <el-table-column label="入札終了日時" align="center" width="120" prop="bidEndDate" :show-overflow-tooltip="true" >
             <template #default="scope">
-                <span>{{ parseTime(scope.row.bidEndDate) }}</span>
+                <span>{{ parseTime(scope.row.bidEndDate, '{m}-{d} {h}:{i}') }}</span>
+            </template>
+        </el-table-column>
+        <el-table-column label="残り時間" align="center" width="100" prop="remainingTime">
+            <template #default="scope">
+                <span v-if="scope.row.remainingTimeUnit != '-'" style="font-weight: bold;">{{ scope.row.remainingTime }}</span>
+                <span >{{ scope.row.remainingTimeUnit }}</span>
+            </template>
+        </el-table-column>
+        <el-table-column label="ステータス" align="center" width="100" prop="realStatus" >
+            <template #default="scope">
+               <dict-tag :options="auc_real_status" :value="scope.row.realStatus" />
             </template>
         </el-table-column>
         <el-table-column label="最後入札者" align="center" prop="bidLastUser" :show-overflow-tooltip="true" />
@@ -88,24 +74,34 @@
         <el-table-column label="托管ユーザ２" align="center" prop="trusteeshipUser2" :show-overflow-tooltip="true" />
         <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
             <template #default="scope">
-               <el-button
-                  type="text"
-                  icon="Delete"
-                  @click="handleForceLogout(scope.row)"
-                  v-hasPermi="['monitor:online:forceLogout']"
-               >强退</el-button>
+               <el-tooltip content="変更" placement="top">
+                  <el-button
+                     type="text"
+                     icon="Edit"
+                     @click="handleUpdate(scope.row)"
+                     v-hasPermi="['monitor:job:edit']"
+                  ></el-button>
+               </el-tooltip>
+               <el-tooltip content="削除" placement="top">
+                  <el-button
+                     type="text"
+                     icon="Delete"
+                     @click="handleDelete(scope.row)"
+                     v-hasPermi="['monitor:job:remove']"
+                  ></el-button>
+               </el-tooltip>
+               <el-tooltip content="最新情報取得" placement="top">
+                  <el-button
+                     type="text"
+                     icon="CaretRight"
+                     @click="handleRun(scope.row)"
+                     v-hasPermi="['monitor:job:changeStatus']"
+                  ></el-button>
+               </el-tooltip>
             </template>
         </el-table-column>
-        <!-- </template> -->
       </el-table>
 
-      <pagination
-         v-show="total > 0"
-         :total="total"
-         v-model:page="queryParams.pageNum"
-         v-model:limit="queryParams.pageSize"
-         @pagination="getList"
-      />
 
       <!-- 添加或修改公告对话框 -->
       <el-dialog :title="title" v-model="open" width="780px" append-to-body>
@@ -142,22 +138,21 @@
 </template>
 
 <script setup name="Bid">
-import { listBid as initData, updateBid, addBid } from "@/api/aucper/bid";
+import { listBid as initData, updateBid, addBid, getBidConfig } from "@/api/aucper/bid";
 
 const { proxy } = getCurrentInstance();
-const { sys_job_status } = proxy.useDict("sys_job_status");
+const { auc_real_status } = proxy.useDict("auc_real_status");
 
 const dataList = ref([]);
 const loading = ref(true);
 const total = ref(0);
 const open = ref(false);
 const title = ref("");
+const baseUrl = ref("");
 
 const data = reactive({
   form: {},
   queryParams: {
-    pageNum: 1,
-    pageSize: 10,
     productCode: undefined,
     taskStatus: undefined
   },
@@ -238,9 +233,15 @@ function getList() {
     loading.value = false;
   });
 }
+
+function getConfig() {
+    getBidConfig().then(response => {
+        baseUrl.value = response.data.baseUrl;
+    });
+}
 /** 搜索按钮操作 */
 function handleQuery() {
-  queryParams.value.pageNum = 1;
+//   queryParams.value.pageNum = 1;
   getList();
 }
 /** 重置按钮操作 */
@@ -295,8 +296,8 @@ function handleForceLogout(row) {
   }).catch(() => {});
 }
 
+getConfig();
 getList();
-
 
 let timerId = setInterval(() => {
    getList();
