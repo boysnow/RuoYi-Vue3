@@ -138,7 +138,7 @@
 </template>
 
 <script setup name="Bid">
-import { listBid as initData, updateBid, addBid, getBidConfig } from "@/api/aucper/bid";
+import { listBid as initData, updateBid, addBid, delBid, getBidConfig } from "@/api/aucper/bid";
 
 const { proxy } = getCurrentInstance();
 const { auc_real_status } = proxy.useDict("auc_real_status");
@@ -261,6 +261,15 @@ function handleAdd() {
   reset();
   open.value = true;
   title.value = "新規登録";
+}
+function handleDelete(row) {
+  const codes = row.productCode;
+  proxy.$modal.confirm('削除しますが、よろしいですか？').then(function () {
+    return delBid(codes);
+  }).then(() => {
+    getList();
+    proxy.$modal.msgSuccess("削除しました");
+  }).catch(() => {});
 }
 function submitForm() {
   proxy.$refs["bidRef"].validate(valid => {
