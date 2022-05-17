@@ -50,7 +50,11 @@
             </template>
         </el-table-column>
         <el-table-column label="タイトル" align="center" width="400" prop="productTitle" :show-overflow-tooltip="true" />
-        <el-table-column label="現在価格" align="center" width="100" prop="nowPrice" />
+        <el-table-column label="現在価格" align="center" width="100" prop="nowPrice"  >
+            <template #default="scope">
+                <span style="font-weight: bold;">{{ scope.row.nowPrice }}</span>
+            </template>
+        </el-table-column>
         <el-table-column label="保留価格" align="center" width="100" prop="onholdPrice" />
         <el-table-column label="入札数" align="center" width="65" prop="bidUserCount" />
         <el-table-column label="入札終了日時" align="center" width="120" prop="bidEndDate" :show-overflow-tooltip="true" >
@@ -69,7 +73,7 @@
                <dict-tag :options="auc_real_status" :value="scope.row.realStatus" />
             </template>
         </el-table-column>
-        <el-table-column label="最後入札者" align="center" prop="bidLastUser" :show-overflow-tooltip="true" />
+        <el-table-column label="最後入札者" align="center" prop="bidLastUser"/>
         <el-table-column label="托管ユーザ１" align="center" prop="trusteeshipUser1" :show-overflow-tooltip="true" />
         <el-table-column label="托管ユーザ２" align="center" prop="trusteeshipUser2" :show-overflow-tooltip="true" />
         <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
@@ -104,23 +108,44 @@
 
 
       <!-- 添加或修改公告对话框 -->
-      <el-dialog :title="title" v-model="open" width="780px" append-to-body>
-         <el-form ref="bidRef" :model="form" :rules="rules" label-width="80px">
+      <el-dialog :title="title" v-model="open" width="600px" append-to-body>
+         <el-form ref="bidRef" :model="form" :rules="rules" label-width="100px">
             <el-row>
-               <el-col :span="12">
-                  <el-form-item label="商品ID" prop="productCode">
-                     <el-input v-model="form.productCode" placeholder="商品コード" />
+               <el-col :span="24">
+                  <el-form-item label="ID/URL" prop="productCode">
+                     <el-input v-model="form.productCode" placeholder="オークションID or URL" id="productCode" :disabled="isEdit"/>
                   </el-form-item>
                </el-col>
+            </el-row>
+            <el-row>
                <el-col :span="24">
-                  <el-form-item label="状態">
-                     <el-radio-group v-model="form.taskStatus">
+                  <el-form-item label="区分">
+                     <el-radio-group v-model="form.taskKind">
                         <el-radio
-                           v-for="dict in sys_job_status"
+                           v-for="dict in auc_task_kind"
                            :key="dict.value"
                            :label="dict.value"
                         >{{ dict.label }}</el-radio>
                      </el-radio-group>
+                  </el-form-item>
+               </el-col>
+            </el-row>
+            <el-row>
+               <el-col :span="12">
+                  <el-form-item label="入札上限価格" prop="onholdPrice">
+                     <el-input v-model="form.onholdPrice" placeholder="入札上限価格" />
+                  </el-form-item>
+               </el-col>
+            </el-row>
+            <el-row>
+               <el-col :span="12">
+                  <el-form-item label="入札ユーザ１" prop="trusteeshipUser1">
+                     <el-input v-model="form.trusteeshipUser1" placeholder="入札ユーザ１" />
+                  </el-form-item>
+               </el-col>
+               <el-col :span="12">
+                  <el-form-item label="入札ユーザ２" prop="trusteeshipUser2">
+                     <el-input v-model="form.trusteeshipUser2" placeholder="入札ユーザ２" />
                   </el-form-item>
                </el-col>
             </el-row>
@@ -138,27 +163,29 @@
 </template>
 
 <script setup name="Bid">
-import { listBid as initData, updateBid, addBid, delBid, getBidConfig } from "@/api/aucper/bid";
+import { listBid as initData, getBid, updateBid, addBid, delBid, getBidConfig } from "@/api/aucper/bid";
 
 const { proxy } = getCurrentInstance();
-const { auc_real_status } = proxy.useDict("auc_real_status");
+const { auc_real_status, auc_task_kind } = proxy.useDict("auc_real_status", "auc_task_kind");
 
 const dataList = ref([]);
 const loading = ref(true);
+const codes = ref([]);
 const total = ref(0);
 const open = ref(false);
 const title = ref("");
 const baseUrl = ref("");
+const isEdit = ref(false);
 
 const data = reactive({
   form: {},
   queryParams: {
     productCode: undefined,
-    taskStatus: undefined
+    taskKind: undefined
   },
   rules: {
-    productCode: [{ required: true, message: "商品コードが必須です", trigger: "blur" }],
-    taskStatus: [{ required: true, message: "商品コードが必須です", trigger: "change" }]
+    productCode: [{ required: true, message: "ID or URLが必須です", trigger: "blur" }],
+    taskKind: [{ required: true, message: "ID or URLが必須です", trigger: "change" }]
   },
 });
 
@@ -252,7 +279,7 @@ function resetQuery() {
 
 function reset() {
   form.value = {
-      taskStatus: 0
+      taskKind: '0'
   };
   proxy.resetForm("bidRef");
 }
@@ -261,7 +288,23 @@ function handleAdd() {
   reset();
   open.value = true;
   title.value = "新規登録";
+  isEdit.value = false;
+    setTimeout(() => {
+        document.getElementById("productCode").focus();
+    }, 200);
 }
+
+function handleUpdate(row) {
+  reset();
+  const code = row.productCode || codes.value;
+  getBid(code).then(response => {
+    form.value = response.data;
+    open.value = true;
+    title.value = "変更";
+    isEdit.value = true;
+  });
+}
+
 function handleDelete(row) {
   const codes = row.productCode;
   proxy.$modal.confirm('削除しますが、よろしいですか？').then(function () {
@@ -274,15 +317,17 @@ function handleDelete(row) {
 function submitForm() {
   proxy.$refs["bidRef"].validate(valid => {
     if (valid) {
-      if (form.value.id != undefined) {
+      //auctionIDがURLの場合、編集しておく
+      form.value.productCode = form.value.productCode.replace(/\/$/, "").replace(/.*\//g, "");
+      if (form.value.updateTime != undefined) {
         updateBid(form.value).then(response => {
-          proxy.$modal.msgSuccess("修改成功");
+          proxy.$modal.msgSuccess("保存しました");
           open.value = false;
           getList();
         });
       } else {
         addBid(form.value).then(response => {
-          proxy.$modal.msgSuccess("新增成功");
+          proxy.$modal.msgSuccess("保存しました");
           open.value = false;
           getList();
         });
