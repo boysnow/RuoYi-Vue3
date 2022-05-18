@@ -44,12 +44,12 @@
                <span>{{ scope.$index + 1 }}</span>
             </template>
         </el-table-column>
-        <el-table-column label="商品コード" align="center" width="120" prop="productCode" >
+        <el-table-column label="商品コード" align="center" width="120" prop="productCode" />
+        <el-table-column label="タイトル" align="center" width="400" prop="productTitle" :show-overflow-tooltip="true" >
             <template #default="scope">
-                <a :href="baseUrl + scope.row.productCode" target="_blank">{{ scope.row.productCode }}</a>
+                <a :href="baseUrl + scope.row.productCode" target="_blank">{{ scope.row.productTitle }}</a>
             </template>
         </el-table-column>
-        <el-table-column label="タイトル" align="center" width="400" prop="productTitle" :show-overflow-tooltip="true" />
         <el-table-column label="現在価格" align="center" width="100" prop="nowPrice"  >
             <template #default="scope">
                 <span style="font-weight: bold;">{{ scope.row.nowPrice }}</span>
