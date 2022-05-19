@@ -50,3 +50,11 @@ export function getBidConfig() {
     method: 'get'
   })
 }
+
+// 商品入札情報の強制更新
+export function forcedUpdate(id) {
+  return request({
+    url: '/aucper/bid/' + id + "/force",
+    method: 'put'
+  })
+}

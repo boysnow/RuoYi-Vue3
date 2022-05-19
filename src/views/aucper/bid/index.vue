@@ -163,7 +163,7 @@
 </template>
 
 <script setup name="Bid">
-import { listBid as initData, getBid, updateBid, addBid, delBid, getBidConfig } from "@/api/aucper/bid";
+import { listBid as initData, getBid, updateBid, addBid, delBid, getBidConfig, forcedUpdate } from "@/api/aucper/bid";
 
 const { proxy } = getCurrentInstance();
 const { auc_real_status, auc_task_kind } = proxy.useDict("auc_real_status", "auc_task_kind");
@@ -314,6 +314,17 @@ function handleDelete(row) {
     proxy.$modal.msgSuccess("削除しました");
   }).catch(() => {});
 }
+
+function handleRun(row) {
+  const codes = row.productCode;
+  proxy.$modal.confirm('すぐ最新情報を取得しますが、よろしいですか？').then(function () {
+    return forcedUpdate(codes);
+  }).then(() => {
+    getList();
+    proxy.$modal.msgSuccess("取得を依頼しました");
+  }).catch(() => {});
+}
+
 function submitForm() {
   proxy.$refs["bidRef"].validate(valid => {
     if (valid) {
