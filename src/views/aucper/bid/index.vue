@@ -35,21 +35,27 @@
       <el-table
          v-loading="loading"
          :data="dataList"
+         ref="datatable"
          style="width: 100%;"
          :cell-class-name="changeBgColor"
          :row-style="rowBgColor"
+         @selection-change="handleSelectionChange"
+         :row-key="getRowKeys"
+         @row-dblclick="handleUpdate"
       >
+        <el-table-column type="selection" width="40" align="center" :reserve-selection="true" />
         <el-table-column label="#" width="50" type="index" align="center">
             <template #default="scope">
                <span>{{ scope.$index + 1 }}</span>
             </template>
         </el-table-column>
         <el-table-column label="商品コード" align="center" width="120" prop="productCode" />
-        <el-table-column label="タイトル" align="center" width="400" prop="productTitle" :show-overflow-tooltip="true" >
+        <el-table-column label="タイトル" align="center" prop="productTitle" :show-overflow-tooltip="true" >
             <template #default="scope">
                 <a :href="baseUrl + scope.row.productCode" target="_blank">{{ scope.row.productTitle }}</a>
             </template>
         </el-table-column>
+        <el-table-column label="備考" align="center" width="70" prop="remark" :show-overflow-tooltip="true" />
         <el-table-column label="現在価格" align="center" width="100" prop="nowPrice"  >
             <template #default="scope">
                 <span style="font-weight: bold;">{{ scope.row.nowPrice }}</span>
@@ -68,15 +74,15 @@
                 <span >{{ scope.row.remainingTimeUnit }}</span>
             </template>
         </el-table-column>
+        <el-table-column label="最後入札者" align="center" width="100" prop="bidLastUser"/>
         <el-table-column label="ステータス" align="center" width="100" prop="realStatus" >
             <template #default="scope">
                <dict-tag :options="auc_real_status" :value="scope.row.realStatus" />
             </template>
         </el-table-column>
-        <el-table-column label="最後入札者" align="center" prop="bidLastUser"/>
-        <el-table-column label="托管ユーザ１" align="center" prop="trusteeshipUser1" :show-overflow-tooltip="true" />
-        <el-table-column label="托管ユーザ２" align="center" prop="trusteeshipUser2" :show-overflow-tooltip="true" />
-        <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
+        <el-table-column label="入札ユーザ１" align="center" width="105" prop="trusteeshipUser1" :show-overflow-tooltip="true" />
+        <el-table-column label="入札ユーザ２" align="center" width="105" prop="trusteeshipUser2" :show-overflow-tooltip="true" />
+        <el-table-column label="操作" align="center" width="100" class-name="small-padding fixed-width">
             <template #default="scope">
                <el-tooltip content="変更" placement="top">
                   <el-button
@@ -138,6 +144,13 @@
                </el-col>
             </el-row>
             <el-row>
+               <el-col :span="24">
+                  <el-form-item label="備考" prop="remark">
+                     <el-input v-model="form.remark" placeholder="備考" maxlength="30" />
+                  </el-form-item>
+               </el-col>
+            </el-row>
+            <el-row>
                <el-col :span="12">
                   <el-form-item label="入札ユーザ１" prop="trusteeshipUser1">
                      <el-input v-model="form.trusteeshipUser1" placeholder="入札ユーザ１" />
@@ -171,6 +184,8 @@ const { auc_real_status, auc_task_kind } = proxy.useDict("auc_real_status", "auc
 const dataList = ref([]);
 const loading = ref(true);
 const codes = ref([]);
+const single = ref(true);
+const multiple = ref(true);
 const total = ref(0);
 const open = ref(false);
 const title = ref("");
@@ -222,6 +237,7 @@ function getList() {
         newrow.loginTime_changed = true;
 
         if (oldrow !== undefined) {
+
             if (oldrow.productCode === newrow.productCode) {
                 newrow.productCode_changed = false;
             }
@@ -284,14 +300,25 @@ function reset() {
   proxy.resetForm("bidRef");
 }
 
+function getRowKeys(row) {
+    return row.productCode;
+}
+
+// 多选框选中数据
+function handleSelectionChange(selection) {
+  codes.value = selection.map(item => item.productCode);
+  single.value = selection.length != 1;
+  multiple.value = !selection.length;
+}
+
 function handleAdd() {
   reset();
   open.value = true;
   title.value = "新規登録";
   isEdit.value = false;
-    setTimeout(() => {
-        document.getElementById("productCode").focus();
-    }, 200);
+  setTimeout(() => {
+      document.getElementById("productCode").focus();
+  }, 200);
 }
 
 function handleUpdate(row) {
@@ -302,16 +329,18 @@ function handleUpdate(row) {
     open.value = true;
     title.value = "変更";
     isEdit.value = true;
+    proxy.$refs.datatable.clearSelection();
   });
 }
 
 function handleDelete(row) {
-  const codes = row.productCode;
+  const code = row.productCode || codes.value;
   proxy.$modal.confirm('削除しますが、よろしいですか？').then(function () {
-    return delBid(codes);
+    return delBid(code);
   }).then(() => {
     getList();
     proxy.$modal.msgSuccess("削除しました");
+    proxy.$refs.datatable.clearSelection();
   }).catch(() => {});
 }
 
