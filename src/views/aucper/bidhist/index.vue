@@ -3,21 +3,12 @@
       <el-row :gutter="10" class="mb8">
          <el-col :span="1.5">
             <el-button
-               type="primary"
-               plain
-               icon="Plus"
-               @click="handleAdd"
-               v-hasPermi="['aucper:bid:add']"
-            >新規</el-button>
-         </el-col>
-         <el-col :span="1.5">
-            <el-button
                type="success"
                plain
                icon="Edit"
                :disabled="single"
                @click="handleUpdate"
-               v-hasPermi="['aucper:bid:edit']"
+               v-hasPermi="['aucper:bidhist:edit']"
             >変更</el-button>
          </el-col>
          <el-col :span="1.5">
@@ -27,27 +18,8 @@
                icon="Delete"
                :disabled="multiple"
                @click="handleDelete"
-               v-hasPermi="['aucper:bid:remove']"
+               v-hasPermi="['aucper:bidhist:remove']"
             >削除</el-button>
-         </el-col>
-         <el-col :span="1.5">
-            <el-button
-               type="success"
-               plain
-               icon="Edit"
-               :disabled="multiple"
-               @click="handleMoveToHist"
-               v-hasPermi="['aucper:bid:edit']"
-            >履歴に移動</el-button>
-         </el-col>
-         <el-col :span="1.5">
-            <el-button
-               type="success"
-               plain
-               icon="Edit"
-               @click="handleLogin"
-               v-hasPermi="['aucper:bid:edit']"
-            >変更</el-button>
          </el-col>
          <right-toolbar v-model:showSearch="showSearch" @queryTable="getList"></right-toolbar>
       </el-row>
@@ -70,9 +42,6 @@
         </el-table-column>
         <el-table-column label="商品コード" align="center" width="120" prop="productCode" />
         <el-table-column label="タイトル" align="center" prop="productTitle" :show-overflow-tooltip="true" >
-            <template #default="scope">
-                <a :href="baseUrl + scope.row.productCode" target="_blank">{{ scope.row.productTitle }}</a>
-            </template>
         </el-table-column>
         <el-table-column label="備考" align="center" width="70" prop="remark" :show-overflow-tooltip="true" />
         <el-table-column label="現在価格" align="center" width="100" prop="nowPrice"  >
@@ -194,9 +163,8 @@
    </div>
 </template>
 
-<script setup name="Bid">
-import { listBid as initData, getBid, updateBid, addBid, delBid, getBidConfig, forcedUpdate, moveBidToHist } from "@/api/aucper/bid";
-import request from '@/utils/request'
+<script setup name="Bidhist">
+import { listBidhist as initData, getBidhist, updateBidhist, addBidhist, delBidhist } from "@/api/aucper/bidhist";
 
 const { proxy } = getCurrentInstance();
 const { auc_real_status, auc_task_kind } = proxy.useDict("auc_real_status", "auc_task_kind");
@@ -232,72 +200,15 @@ function getList() {
   initData(queryParams.value).then(response => {
     // 値が変化あるかチェック
     let beforeData = dataList.value;
-    let testVar = "aaa";
-    // beforeData = "dddddd";
     dataList.value = response.rows;
     // 
-    dataList.value.map(newrow => {
-        // レコード特定
-        let oldrow = beforeData.find(o => o.productCode === newrow.productCode);
-
-        newrow.productCode_changed = false;
-        newrow.productTitle_changed = false;
-        newrow.nowPrice_changed = false;
-        newrow.onholdPrice_changed = false;
-        newrow.bidUserCount_changed = false;
-        newrow.bidEndDate_changed = false;
-        newrow.bidLastUser_changed = false;
-        newrow.trusteeshipUser1_changed = false;
-        newrow.trusteeshipUser2_changed = false;
-        newrow.loginTime_changed = false;
-
-        if (oldrow !== undefined) {
-
-            if (oldrow.productCode !== newrow.productCode) {
-                newrow.productCode_changed = true;
-            }
-            if (oldrow.productTitle !== newrow.productTitle) {
-                newrow.productTitle_changed = true;
-            }
-            if (oldrow.nowPrice !== newrow.nowPrice) {
-                newrow.nowPrice_changed = true;
-            }
-            if (oldrow.onholdPrice !== newrow.onholdPrice) {
-                newrow.onholdPrice_changed = true;
-            }
-            if (oldrow.bidUserCount !== newrow.bidUserCount) {
-                newrow.bidUserCount_changed = true;
-            }
-            if (oldrow.bidEndDate !== newrow.bidEndDate) {
-                newrow.bidEndDate_changed = true;
-            }
-            if (oldrow.bidLastUser !== newrow.bidLastUser) {
-                newrow.bidLastUser_changed = true;
-            }
-            if (oldrow.trusteeshipUser1 !== newrow.trusteeshipUser1) {
-                newrow.trusteeshipUser1_changed = true;
-            }
-            if (oldrow.trusteeshipUser2 !== newrow.trusteeshipUser2) {
-                newrow.trusteeshipUser2_changed = true;
-            }
-            if (oldrow.loginTime !== newrow.loginTime) {
-                newrow.loginTime_changed = true;
-            }
-        }
-    });
 
     total.value = response.total;
     loading.value = false;
   });
 }
 
-function getConfig() {
-    getBidConfig().then(response => {
-        baseUrl.value = response.data.baseUrl;
-    });
-}
 
-getConfig();
 getList();
 
 /** 搜索按钮操作 */
@@ -329,38 +240,6 @@ function handleSelectionChange(selection) {
   multiple.value = !selection.length;
 }
 
-function handleAdd() {
-  reset();
-  open.value = true;
-  title.value = "新規登録";
-  isEdit.value = false;
-  setTimeout(() => {
-      document.getElementById("productCode").focus();
-  }, 200);
-}
-
-function handleUpdate(row) {
-  reset();
-  const code = row.productCode || codes.value;
-  getBid(code).then(response => {
-    form.value = response.data;
-    open.value = true;
-    title.value = "変更";
-    isEdit.value = true;
-    proxy.$refs.datatable.clearSelection();
-  });
-}
-
-function handleDelete(row) {
-  const code = row.productCode || codes.value;
-  proxy.$modal.confirm('削除しますが、よろしいですか？').then(function () {
-    return delBid(code);
-  }).then(() => {
-    getList();
-    proxy.$modal.msgSuccess("削除しました");
-    proxy.$refs.datatable.clearSelection();
-  }).catch(() => {});
-}
 
 function handleRun(row) {
   const codes = row.productCode;
@@ -369,32 +248,6 @@ function handleRun(row) {
   }).then(() => {
     getList();
     proxy.$modal.msgSuccess("取得を依頼しました");
-  }).catch(() => {});
-}
-
-function handleMoveToHist(row) {
-  const code = row.productCode || codes.value;
-  proxy.$modal.confirm('履歴に移動しますが、よろしいですか？').then(function () {
-    return moveBidToHist(code);
-  }).then(() => {
-    getList();
-    proxy.$modal.msgSuccess("履歴に移動しました");
-    proxy.$refs.datatable.clearSelection();
-  }).catch(() => {});
-}
-
-function doLogin() {
-  return request({
-    url: '/aucper/bid/login',
-    method: 'post'
-  })
-}
-
-function handleLogin() {
-  proxy.$modal.confirm('ログインしますが、よろしいですか？').then(function () {
-    return doLogin();
-  }).then(() => {
-    proxy.$modal.msgSuccess("ログインしました");
   }).catch(() => {});
 }
 
@@ -434,53 +287,7 @@ function handleForceLogout(row) {
   }).catch(() => {});
 }
 
-let timerId = setInterval(() => {
-   getList();
-}, 5000);
 
-
-function changeBgColor({row, column}) {
-    if (column.property === "productCode") {
-        if (row.productCode_changed) return "animate-red-bg";
-    }
-    if (column.property === "productTitle") {
-        if (row.productTitle_changed) return "animate-red-bg";
-    }
-    if (column.property === "nowPrice") {
-        if (row.nowPrice_changed) return "animate-red-bg";
-    }
-    if (column.property === "onholdPrice") {
-        if (row.onholdPrice_changed) return "animate-red-bg";
-    }
-    if (column.property === "bidUserCount") {
-        if (row.bidUserCount_changed) return "animate-red-bg";
-    }
-    if (column.property === "bidEndDate") {
-        if (row.bidEndDate_changed) return "animate-red-bg";
-    }
-    if (column.property === "bidLastUser") {
-        if (row.bidLastUser_changed) return "animate-red-bg";
-    }
-    if (column.property === "trusteeshipUser1") {
-        if (row.trusteeshipUser1_changed) return "animate-red-bg";
-    }
-    if (column.property === "trusteeshipUser2") {
-        if (row.trusteeshipUser2_changed) return "animate-red-bg";
-    }
-    if (column.property === "loginTime") {
-        if (row.loginTime_changed) return "animate-red-bg";
-    }
-}
-
-function rowBgColor({row, rowIndex}) {
-    if (row.bidStatus === "2") {
-        return "background-color: silver";
-    }
-}
-
-onUnmounted(() => {
-   clearInterval(timerId);
-})
 
 
 </script>

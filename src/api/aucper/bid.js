@@ -58,3 +58,10 @@ export function forcedUpdate(id) {
     method: 'put'
   })
 }
+
+export function moveBidToHist(id) {
+    return request({
+      url: '/aucper/bid/' + id,
+      method: 'put'
+    })
+}
