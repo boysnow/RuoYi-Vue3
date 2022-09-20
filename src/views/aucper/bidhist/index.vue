@@ -25,7 +25,7 @@
       </el-row>
       <el-table
          v-loading="loading"
-         :data="dataList"
+         :data="dataList.slice((pageNum - 1) * pageSize, pageNum * pageSize)"
          ref="datatable"
          style="width: 100%;"
          :cell-class-name="changeBgColor"
@@ -100,64 +100,7 @@
         </el-table-column>
       </el-table>
 
-
-      <!-- 添加或修改公告对话框 -->
-      <el-dialog :title="title" v-model="open" width="600px" append-to-body>
-         <el-form ref="bidRef" :model="form" :rules="rules" label-width="100px">
-            <el-row>
-               <el-col :span="24">
-                  <el-form-item label="ID/URL" prop="productCode">
-                     <el-input v-model="form.productCode" placeholder="オークションID or URL" id="productCode" :disabled="isEdit"/>
-                  </el-form-item>
-               </el-col>
-            </el-row>
-            <el-row>
-               <el-col :span="24">
-                  <el-form-item label="区分">
-                     <el-radio-group v-model="form.taskKind">
-                        <el-radio
-                           v-for="dict in auc_task_kind"
-                           :key="dict.value"
-                           :label="dict.value"
-                        >{{ dict.label }}</el-radio>
-                     </el-radio-group>
-                  </el-form-item>
-               </el-col>
-            </el-row>
-            <el-row>
-               <el-col :span="12">
-                  <el-form-item label="入札上限価格" prop="onholdPrice">
-                     <el-input v-model="form.onholdPrice" placeholder="入札上限価格" />
-                  </el-form-item>
-               </el-col>
-            </el-row>
-            <el-row>
-               <el-col :span="24">
-                  <el-form-item label="備考" prop="remark">
-                     <el-input v-model="form.remark" placeholder="備考" maxlength="30" />
-                  </el-form-item>
-               </el-col>
-            </el-row>
-            <el-row>
-               <el-col :span="12">
-                  <el-form-item label="入札ユーザ１" prop="trusteeshipUser1">
-                     <el-input v-model="form.trusteeshipUser1" placeholder="入札ユーザ１" />
-                  </el-form-item>
-               </el-col>
-               <el-col :span="12">
-                  <el-form-item label="入札ユーザ２" prop="trusteeshipUser2">
-                     <el-input v-model="form.trusteeshipUser2" placeholder="入札ユーザ２" />
-                  </el-form-item>
-               </el-col>
-            </el-row>
-         </el-form>
-         <template #footer>
-            <div class="dialog-footer">
-               <el-button type="primary" @click="submitForm">確定</el-button>
-               <el-button @click="cancel">取消</el-button>
-            </div>
-         </template>
-      </el-dialog>
+      <pagination v-show="total > 0" :total="total" v-model:page="pageNum" v-model:limit="pageSize" />
 
 
    </div>
@@ -171,6 +114,9 @@ const { auc_real_status, auc_task_kind } = proxy.useDict("auc_real_status", "auc
 
 const dataList = ref([]);
 const loading = ref(true);
+const pageNum = ref(1);
+const pageSize = ref(10);
+
 const codes = ref([]);
 const single = ref(true);
 const multiple = ref(true);
@@ -213,7 +159,7 @@ getList();
 
 /** 搜索按钮操作 */
 function handleQuery() {
-//   queryParams.value.pageNum = 1;
+  pageNum.value = 1;
   getList();
 }
 /** 重置按钮操作 */
