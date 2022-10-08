@@ -75,9 +75,12 @@
             </template>
         </el-table-column>
         <el-table-column label="備考" align="center" width="70" prop="remark" :show-overflow-tooltip="true" />
-        <el-table-column label="現在価格" align="center" width="100" prop="nowPrice"  >
+        <el-table-column align="center" width="100" prop="nowPrice" >
+            <template #header>
+                現在価格<br>(税込)
+            </template>
             <template #default="scope">
-                <span style="font-weight: bold;">{{ scope.row.nowPrice }}</span>
+                <span style="font-weight: bold;">{{ new Intl.NumberFormat().format(scope.row.nowPrice) }}</span>
             </template>
         </el-table-column>
         <el-table-column label="保留価格" align="center" width="100" prop="onholdPrice" />

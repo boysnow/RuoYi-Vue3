@@ -25,28 +25,28 @@
       </el-row>
       <el-table
          v-loading="loading"
-         :data="dataList.slice((pageNum - 1) * pageSize, pageNum * pageSize)"
+         :data="dataList"
          ref="datatable"
          style="width: 100%;"
-         :cell-class-name="changeBgColor"
-         :row-style="rowBgColor"
          @selection-change="handleSelectionChange"
          :row-key="getRowKeys"
-         @row-dblclick="handleUpdate"
       >
         <el-table-column type="selection" width="40" align="center" :reserve-selection="true" />
         <el-table-column label="#" width="50" type="index" align="center">
             <template #default="scope">
-               <span>{{ scope.$index + 1 }}</span>
+               <span>{{ (queryParams.pageNum - 1) * queryParams.pageSize + scope.$index + 1 }}</span>
             </template>
         </el-table-column>
         <el-table-column label="商品コード" align="center" width="120" prop="productCode" />
         <el-table-column label="タイトル" align="center" prop="productTitle" :show-overflow-tooltip="true" >
         </el-table-column>
         <el-table-column label="備考" align="center" width="70" prop="remark" :show-overflow-tooltip="true" />
-        <el-table-column label="現在価格" align="center" width="100" prop="nowPrice"  >
+        <el-table-column align="center" width="100" prop="nowPrice">
+            <template #header>
+                現在価格<br>(税込)
+            </template>
             <template #default="scope">
-                <span style="font-weight: bold;">{{ scope.row.nowPrice }}</span>
+                <span style="font-weight: bold;">{{ new Intl.NumberFormat().format(scope.row.nowPrice) }}</span>
             </template>
         </el-table-column>
         <el-table-column label="保留価格" align="center" width="100" prop="onholdPrice" />
@@ -100,7 +100,13 @@
         </el-table-column>
       </el-table>
 
-      <pagination v-show="total > 0" :total="total" v-model:page="pageNum" v-model:limit="pageSize" />
+      <pagination
+        v-show="total > 0" 
+        :total="total" 
+        v-model:page="queryParams.pageNum"
+        v-model:limit="queryParams.pageSize"
+        @pagination="getList"
+      />
 
 
    </div>
@@ -114,8 +120,6 @@ const { auc_real_status, auc_task_kind } = proxy.useDict("auc_real_status", "auc
 
 const dataList = ref([]);
 const loading = ref(true);
-const pageNum = ref(1);
-const pageSize = ref(10);
 
 const codes = ref([]);
 const single = ref(true);
@@ -129,8 +133,12 @@ const isEdit = ref(false);
 const data = reactive({
   form: {},
   queryParams: {
+    pageNum: 1,
+    pageSize: 10,
     productCode: undefined,
-    taskKind: undefined
+    taskKind: undefined,
+    createBy: undefined,
+    status: undefined
   },
   rules: {
     productCode: [{ required: true, message: "ID or URLが必須です", trigger: "blur" }],
@@ -159,7 +167,7 @@ getList();
 
 /** 搜索按钮操作 */
 function handleQuery() {
-  pageNum.value = 1;
+  queryParams.value.pageNum = 1;
   getList();
 }
 /** 重置按钮操作 */
