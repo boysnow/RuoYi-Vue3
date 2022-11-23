@@ -193,6 +193,25 @@
          </template>
       </el-dialog>
 
+      <!-- SMS CODE -->
+      <!-- <el-dialog :title="title" v-model="open" width="600px" append-to-body>
+         <el-form ref="bidRef" :model="form" :rules="rules" label-width="100px">
+            <el-row>
+               <el-col :span="12">
+                  <el-form-item label="認証コード" prop="smscd">
+                     <el-input v-model="smscd" placeholder="認証コー" />
+                  </el-form-item>
+               </el-col>
+            </el-row>
+         </el-form>
+         <template #footer>
+            <div class="dialog-footer">
+               <el-button type="primary" @click="doLoginSMS(smscd)">確定</el-button>
+               <el-button @click="cancel">取消</el-button>
+            </div>
+         </template>
+      </el-dialog> -->
+
 
    </div>
 </template>
@@ -235,8 +254,6 @@ function getList() {
   initData(queryParams.value).then(response => {
     // 値が変化あるかチェック
     let beforeData = dataList.value;
-    let testVar = "aaa";
-    // beforeData = "dddddd";
     dataList.value = response.rows;
     // 
     dataList.value.map(newrow => {
@@ -387,10 +404,40 @@ function handleMoveToHist(row) {
 }
 
 function doLogin() {
-  return request({
+  request({
     url: '/aucper/bid/login',
     method: 'post'
-  })
+  }).then(response => {
+    console.log(response);
+    if (response.data.kind == "2") {
+        doLoginSMS(response.data.id);
+    }
+  }).catch(() => {});
+}
+
+function doLoginSMS(wid) {
+  proxy.$prompt('SMS認証コード', "入力", {
+    confirmButtonText: "OK",
+    cancelButtonText: "Cancel",
+    closeOnClickModal: false,
+    inputPattern: /^[0-9]{4,10}$/,
+    inputErrorMessage: "4-10桁のSMS認証コード",
+  }).then(({ value }) => {
+    console.log("wid=" + wid);
+    console.log("smscd=" + value);
+    request({
+        url: '/aucper/bid/login/sms',
+        method: 'post',
+        data: {'wid': wid, 'smscd': value}
+    })
+  }).catch(() => {});
+
+
+//     console.log(smscd);
+//   return request({
+//     url: '/aucper/bid/login2',
+//     method: 'post'
+//   })
 }
 
 function handleLogin() {
@@ -398,8 +445,14 @@ function handleLogin() {
     return doLogin();
   }).then(() => {
     proxy.$modal.msgSuccess("ログインしました");
+
+
+
   }).catch(() => {});
 }
+// function handleLogin2() {
+//     return doLogin2();
+// }
 
 function submitForm() {
   proxy.$refs["bidRef"].validate(valid => {
